@@ -8,6 +8,7 @@ from typing import Any, List
 import numpy as np
 import tiktoken
 from langchain_openai import AzureOpenAIEmbeddings, OpenAIEmbeddings
+from dataherald.utils.compat_embeddings import TextOpenAIEmbeddings
 from openai import OpenAI
 from overrides import override
 from sql_metadata import Parser
@@ -51,8 +52,10 @@ class OpenAIFineTuning(FinetuningModel):
                 model=EMBEDDING_MODEL,
             )
         else:
-            self.embedding = OpenAIEmbeddings(
-                openai_api_key=db_connection.decrypt_api_key(),
+            self.embedding = TextOpenAIEmbeddings(
+                openai_api_key=os.environ.get("EMBEDDING_API_KEY")
+                or db_connection.decrypt_api_key(),
+                openai_api_base=os.environ.get("EMBEDDING_API_BASE"),
                 model=EMBEDDING_MODEL,
             )
         self.encoding = tiktoken.encoding_for_model(

@@ -130,6 +130,7 @@ class SimpleEvaluator(Evaluator):
             temperature=0,
             model_name=self.llm_config.llm_name,
             api_base=self.llm_config.api_base,
+            model_family=self.llm_config.model_family,
         )
         start_time = time.time()
         human_message_prompt = HumanMessagePromptTemplate.from_template(HUMAN_TEMPLATE)

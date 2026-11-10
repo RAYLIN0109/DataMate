@@ -222,9 +222,9 @@ class SQLGenerator(Component, ABC):
         except EngineTimeOutORItemLimitError as e:
             raise EngineTimeOutORItemLimitError(e) from e
         except Exception as e:
-            response.sql = ("",)
-            response.status = ("INVALID",)
-            response.error = (str(e),)
+            response.sql = ""
+            response.status = "INVALID"
+            response.error = str(e)
         finally:
             queue.put(None)
             response.tokens_used = cb.total_tokens

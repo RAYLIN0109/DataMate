@@ -11,7 +11,7 @@ const WithMobileRedirect: FC<WithMobileRedirectProps> = ({ children }) => {
   const router = useRouter()
 
   useEffect(() => {
-    if (isMobile) {
+    if (isMobile && process.env.NEXT_PUBLIC_AUTH_DISABLED !== 'true') {
       router.push('/switch-to-larger-screen')
     }
   }, [isMobile, router])

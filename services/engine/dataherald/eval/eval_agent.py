@@ -252,6 +252,7 @@ class EvaluationAgent(Evaluator):
             temperature=0,
             model_name=self.llm_config.llm_name,
             api_base=self.llm_config.api_base,
+            model_family=self.llm_config.model_family,
         )
         database = SQLDatabase.get_sql_engine(database_connection)
         user_question = user_prompt.text

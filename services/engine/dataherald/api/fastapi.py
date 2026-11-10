@@ -20,6 +20,7 @@ from dataherald.api.types.requests import (
     PromptRequest,
     PromptSQLGenerationNLGenerationRequest,
     PromptSQLGenerationRequest,
+    SQLExecutionRequest,
     SQLGenerationRequest,
     StreamPromptSQLGenerationRequest,
     UpdateMetadataRequest,
@@ -440,6 +441,28 @@ class FastAPI(API):
         except Exception as e:
             raise HTTPException(status_code=400, detail=str(e)) from e
         return results[1].get("result", [])
+
+    @override
+    def create_sql_execution(self, request: SQLExecutionRequest) -> dict:
+        """Executes an arbitrary SQL query against a database connection"""
+        db_connection_repository = DatabaseConnectionRepository(self.storage)
+        db_connection = db_connection_repository.find_by_id(request.db_connection_id)
+        if not db_connection:
+            raise HTTPException(
+                status_code=404, detail=f"Database connection {request.db_connection_id} not found"
+            )
+        try:
+            database = SQLDatabase.get_sql_engine(db_connection, True)
+            _, result = database.run_sql(request.sql, request.max_rows)
+        except SQLInjectionError as e:
+            raise HTTPException(status_code=400, detail=str(e)) from e
+        except SQLAlchemyError as e:
+            raise HTTPException(status_code=400, detail=str(e)) from e
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=str(e)) from e
+        rows = [dict(row._mapping) for row in result.get("result", [])]
+        columns = list(rows[0].keys()) if rows else []
+        return {"columns": columns, "rows": rows}
 
     @override
     def export_csv_file(self, sql_generation_id: str) -> io.StringIO:

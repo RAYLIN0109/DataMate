@@ -11,6 +11,7 @@ from dataherald.api.types.requests import (
     PromptRequest,
     PromptSQLGenerationNLGenerationRequest,
     PromptSQLGenerationRequest,
+    SQLExecutionRequest,
     SQLGenerationRequest,
     StreamPromptSQLGenerationRequest,
     UpdateMetadataRequest,
@@ -272,4 +273,8 @@ class API(Component, ABC):
         self,
         request: StreamPromptSQLGenerationRequest,
     ):
+        pass
+
+    @abstractmethod
+    def create_sql_execution(self, request: SQLExecutionRequest) -> dict:
         pass

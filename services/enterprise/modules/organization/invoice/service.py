@@ -85,6 +85,40 @@ class InvoiceService:
 
     def get_pending_invoice(self, org_id: str) -> InvoiceResponse:
         organization = self.org_repo.get_organization(org_id)
+        if invoice_settings.stripe_disabled:
+            # Stripe is not configured: build the invoice from locally recorded
+            # usage and credits instead of querying the Stripe API
+            anchor = (
+                organization.invoice_details.billing_cycle_anchor
+                or int((organization.created_at or datetime.now()).timestamp())
+            )
+            (
+                current_period_start,
+                current_period_end,
+            ) = self.billing.get_current_subscription_period_with_anchor(anchor)
+            usage_invoice = self._get_invoice_from_usages(
+                self.repo.get_usages(
+                    org_id,
+                    current_period_start,
+                    datetime.now(),
+                    record_status=RecordStatus.UNRECORDED,
+                )
+            )
+            unrecorded_credits = self._calculate_total_credits(
+                self.repo.get_credits(org_id, RecordStatus.UNRECORDED)
+            )
+            return InvoiceResponse(
+                **usage_invoice.dict(),
+                available_credits=organization.invoice_details.available_credits,
+                total_credits=sum(
+                    credit.amount for credit in self.repo.get_positive_credits(org_id)
+                ),
+                amount_due=self._calculate_total_usage_cost(usage_invoice)
+                + unrecorded_credits,
+                spending_limit=organization.invoice_details.spending_limit,
+                current_period_start=current_period_start,
+                current_period_end=current_period_end,
+            )
         (
             current_period_start,
             current_period_end,

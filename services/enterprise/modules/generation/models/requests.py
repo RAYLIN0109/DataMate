@@ -24,6 +24,12 @@ class SQLRequest(BaseModel):
     sql: str
 
 
+class SQLExecutionRequest(BaseModel):
+    db_connection_id: ObjectIdString
+    sql: str
+    max_rows: int = 100
+
+
 class PromptRequest(BaseModel):
     text: str
     db_connection_id: ObjectIdString

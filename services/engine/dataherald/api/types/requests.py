@@ -39,6 +39,12 @@ class PromptSQLGenerationRequest(SQLGenerationRequest):
     prompt: PromptRequest
 
 
+class SQLExecutionRequest(BaseModel):
+    db_connection_id: str
+    sql: str
+    max_rows: int = 100
+
+
 class StreamPromptSQLGenerationRequest(StreamSQLGenerationRequest):
     prompt: PromptRequest
 

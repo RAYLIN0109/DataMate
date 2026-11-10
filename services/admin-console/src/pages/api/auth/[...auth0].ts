@@ -42,7 +42,64 @@ const afterCallback: AfterCallback = async (
   return session
 }
 
-export default handleAuth({
+const AUTH_DISABLED = process.env.AUTH_DISABLED === 'true'
+
+const MOCK_USER = {
+  sub: 'admin@datamate.local',
+  email: 'admin@datamate.local',
+  email_verified: true,
+  name: '本地测试管理员',
+  nickname: 'admin',
+  picture: null,
+  organization_id: null,
+  updated_at: null,
+}
+
+/** 本地测试模式：不经过 Auth0，直接模拟登录会话 */
+const mockHandler = async (req: NextApiRequest, res: NextApiResponse) => {
+  const route = (req.query.auth0 as string[])?.[0]
+  switch (route) {
+    case 'me': {
+      try {
+        const user: User = await serverFetcher<User>(`${API_URL}/auth/login`, {
+          body: JSON.stringify(MOCK_USER),
+          method: 'POST',
+          token: MOCK_USER.email,
+        })
+        res.json({ ...MOCK_USER, ...user })
+      } catch (e) {
+        console.error('Mock /me: enterprise login failed:', e)
+        res.json(MOCK_USER)
+      }
+      return
+    }
+    case 'token':
+      res.json(MOCK_USER.email)
+      return
+    case 'login':
+      try {
+        await serverFetcher<User>(`${API_URL}/auth/login`, {
+          body: JSON.stringify(MOCK_USER),
+          method: 'POST',
+          token: MOCK_USER.email,
+        })
+      } catch (e) {
+        console.error('Mock login to enterprise API failed:', e)
+      }
+      res.writeHead(302, { Location: '/' })
+      res.end()
+      return
+    case 'logout':
+    case 'callback':
+      res.writeHead(302, { Location: '/' })
+      res.end()
+      return
+    default:
+      res.status(404).end()
+  }
+}
+
+const auth0Handler = handleAuth({
   login: handleLogin({
     authorizationParams: {
       scope: AUTH.scope,
@@ -65,3 +122,5 @@ export default handleAuth({
     res.end()
   },
 })
+
+export default AUTH_DISABLED ? mockHandler : auth0Handler

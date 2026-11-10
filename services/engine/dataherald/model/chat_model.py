@@ -44,7 +44,11 @@ class ChatModel(LLMModel):
             )
         if model_family == "anthropic":
             return ChatAnthropic(
-                model_name=model_name, anthropic_api_key=api_key, **kwargs
+                model=model_name,
+                anthropic_api_key=api_key,
+                anthropic_api_url=api_base,
+                max_tokens_to_sample=kwargs.pop("max_tokens_to_sample", 1024),
+                **kwargs
             )
         if model_family == "google":
             return ChatGooglePalm(

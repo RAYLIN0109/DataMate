@@ -1,6 +1,7 @@
 from datetime import datetime
 
 import httpx
+from fastapi import HTTPException
 from fastapi.responses import StreamingResponse
 
 from config import settings
@@ -34,6 +35,7 @@ from modules.generation.models.requests import (
     PromptSQLGenerationRequest,
     PromptSQLNLGenerationRequest,
     SlackGenerationRequest,
+    SQLExecutionRequest,
     SQLGenerationExecuteRequest,
     SQLGenerationRequest,
     SQLNLGenerationRequest,
@@ -518,6 +520,29 @@ class AggrgationGenerationService:
             return self._get_mapped_generation_response(
                 prompt, sql_generation, None, sql_result=sql_result
             )
+
+    async def create_sql_execution(
+        self, request: SQLExecutionRequest, org_id: str
+    ) -> dict:
+        self.db_connection_service.get_db_connection_in_org(
+            request.db_connection_id, org_id
+        )
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                settings.engine_url + "/sql-executions",
+                json={
+                    "db_connection_id": request.db_connection_id,
+                    "sql": request.sql,
+                    "max_rows": request.max_rows,
+                },
+                timeout=settings.default_engine_timeout,
+            )
+            if response.status_code != 200:
+                detail = response.json().get(
+                    "detail", f"SQL execution failed (HTTP {response.status_code})"
+                )
+                raise HTTPException(status_code=response.status_code, detail=detail)
+            return response.json()
 
     async def create_nl_generation(
         self, prompt_id: str, org_id: str

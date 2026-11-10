@@ -28,7 +28,6 @@ def is_stripe_disabled(request: Request):
 router = APIRouter(
     prefix="/organizations",
     responses={404: {"description": "Not found"}},
-    dependencies=[Depends(is_stripe_disabled)],
 )
 
 authorize = Authorize()
@@ -44,7 +43,9 @@ def get_pending_invoice(
     return invoice_service.get_pending_invoice(id)
 
 
-@router.get("/{id}/invoices/payment-methods")
+@router.get(
+    "/{id}/invoices/payment-methods", dependencies=[Depends(is_stripe_disabled)]
+)
 def get_payment_methods(
     id: str, user: User = Security(authenticate_user)
 ) -> list[PaymentMethodResponse]:
@@ -52,7 +53,11 @@ def get_payment_methods(
     return invoice_service.get_payment_methods(id)
 
 
-@router.post("/{id}/invoices/payment-methods", status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/{id}/invoices/payment-methods",
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(is_stripe_disabled)],
+)
 def attach_payment_method(
     id: str,
     payment_method_request: PaymentMethodRequest,
@@ -63,7 +68,10 @@ def attach_payment_method(
     return invoice_service.attach_payment_method(id, payment_method_request, default)
 
 
-@router.put("/{id}/invoices/payment-methods/default")
+@router.put(
+    "/{id}/invoices/payment-methods/default",
+    dependencies=[Depends(is_stripe_disabled)],
+)
 def set_default_payment_method(
     id: str,
     payment_method_request: PaymentMethodRequest,
@@ -73,7 +81,10 @@ def set_default_payment_method(
     return invoice_service.set_default_payment_method(id, payment_method_request)
 
 
-@router.delete("/{id}/invoices/payment-methods/{payment_method_id}")
+@router.delete(
+    "/{id}/invoices/payment-methods/{payment_method_id}",
+    dependencies=[Depends(is_stripe_disabled)],
+)
 def delete_payment_method(
     id: str, payment_method_id: str, user: User = Security(authenticate_user)
 ) -> PaymentMethodResponse:
@@ -99,7 +110,11 @@ def update_spending_limit(
     return invoice_service.update_spending_limit(id, spending_limit_request)
 
 
-@router.post("/{id}/invoices/credits", status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/{id}/invoices/credits",
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(is_stripe_disabled)],
+)
 def add_credits(
     id: str, credit_request: CreditRequest, user: User = Security(authenticate_user)
 ) -> CreditResponse:
@@ -107,6 +122,6 @@ def add_credits(
     return invoice_service.add_credits(id, user.id, credit_request)
 
 
-@router.post("/invoices/webhook")
+@router.post("/invoices/webhook", dependencies=[Depends(is_stripe_disabled)])
 async def webhook(request: Request):
     return await invoice_webhook.handler(request)

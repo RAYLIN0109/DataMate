@@ -20,7 +20,7 @@ services:
     env_file: .env
   mongodb:
     container_name: mongodb
-    image: mongo:latest
+    image: mongo:6.0
     restart: always
     ports:
       - 27017:27017
@@ -32,6 +32,19 @@ services:
       MONGO_INITDB_ROOT_USERNAME: "${MONGODB_DB_USERNAME}"
       MONGO_INITDB_ROOT_PASSWORD: "${MONGODB_DB_PASSWORD}"
       MONGO_INITDB_DATABASE: "${MONGODB_DB_NAME}"
+    networks:
+      - dataherald_network
+  mysql:
+    container_name: mysql
+    image: mysql:8.0
+    restart: always
+    ports:
+      - "13306:3306"
+    volumes:
+      - ./initdb.d/mysql-init.sql:/docker-entrypoint-initdb.d/mysql-init.sql:ro
+      - ./dbdata/mysql_data:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: dataherald
     networks:
       - dataherald_network
 # uncomment if you want to use the s3 alternative minio instead of AWS S3

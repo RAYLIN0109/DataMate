@@ -5,6 +5,7 @@ from modules.generation.aggr_service import AggrgationGenerationService
 from modules.generation.models.requests import (
     GenerationUpdateRequest,
     SlackGenerationRequest,
+    SQLExecutionRequest,
     SQLGenerationExecuteRequest,
     SQLRequest,
 )
@@ -144,6 +145,16 @@ async def ac_create_prompt_sql_generation_stream(
         generation_service.create_prompt_sql_generation_stream(
             request, user.organization_id, user.name
         )
+    )
+
+
+@ac_router.post("/sql-executions")
+async def ac_create_sql_execution(
+    request: SQLExecutionRequest,
+    user: User = Security(authenticate_user),
+):
+    return await generation_service.create_sql_execution(
+        request, user.organization_id
     )
 
 

@@ -22,6 +22,7 @@ from langchain.chains.llm import LLMChain
 from langchain.tools.base import BaseTool
 from langchain_community.callbacks import get_openai_callback
 from langchain_openai import AzureOpenAIEmbeddings, OpenAIEmbeddings
+from dataherald.utils.compat_embeddings import TextOpenAIEmbeddings
 from openai import OpenAI
 from overrides import override
 from pydantic import BaseModel, Field
@@ -570,6 +571,7 @@ class DataheraldFinetuningAgent(SQLGenerator):
             temperature=0,
             model_name=self.llm_config.llm_name,
             api_base=self.llm_config.api_base,
+            model_family=self.llm_config.model_family,
         )
         repository = TableDescriptionRepository(storage)
         db_scan = repository.get_all_tables_by_db(
@@ -602,7 +604,7 @@ class DataheraldFinetuningAgent(SQLGenerator):
                 model=EMBEDDING_MODEL,
             )
         else:
-            embedding = OpenAIEmbeddings(
+            embedding = TextOpenAIEmbeddings(
                 openai_api_key=database_connection.decrypt_api_key(),
                 model=EMBEDDING_MODEL,
             )
@@ -682,6 +684,7 @@ class DataheraldFinetuningAgent(SQLGenerator):
             temperature=0,
             model_name=self.llm_config.llm_name,
             api_base=self.llm_config.api_base,
+            model_family=self.llm_config.model_family,
             streaming=True,
         )
         repository = TableDescriptionRepository(storage)
@@ -715,7 +718,7 @@ class DataheraldFinetuningAgent(SQLGenerator):
                 model=EMBEDDING_MODEL,
             )
         else:
-            embedding = OpenAIEmbeddings(
+            embedding = TextOpenAIEmbeddings(
                 openai_api_key=database_connection.decrypt_api_key(),
                 model=EMBEDDING_MODEL,
             )

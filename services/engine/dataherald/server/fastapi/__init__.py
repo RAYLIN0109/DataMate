@@ -15,6 +15,7 @@ from dataherald.api.types.requests import (
     PromptRequest,
     PromptSQLGenerationNLGenerationRequest,
     PromptSQLGenerationRequest,
+    SQLExecutionRequest,
     SQLGenerationRequest,
     StreamPromptSQLGenerationRequest,
     UpdateMetadataRequest,
@@ -231,6 +232,13 @@ class FastAPI(dataherald.server.Server):
             self.execute_sql_query,
             methods=["GET"],
             tags=["SQL Generation"],
+        )
+
+        self.router.add_api_route(
+            "/api/v1/sql-executions",
+            self.create_sql_execution,
+            methods=["POST"],
+            tags=["SQL Execution"],
         )
 
         self.router.add_api_route(
@@ -510,6 +518,10 @@ class FastAPI(dataherald.server.Server):
     def execute_sql_query(self, sql_generation_id: str, max_rows: int = 100) -> list:
         """Executes a query on the given db_connection_id"""
         return self._api.execute_sql_query(sql_generation_id, max_rows)
+
+    def create_sql_execution(self, request: SQLExecutionRequest) -> dict:
+        """Executes an arbitrary SQL query on the given db_connection_id"""
+        return self._api.create_sql_execution(request)
 
     def export_csv_file(self, sql_generation_id: str) -> StreamingResponse:
         """Exports a CSV file for the given sql_generation_id"""

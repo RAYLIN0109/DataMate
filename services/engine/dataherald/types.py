@@ -187,7 +187,8 @@ class Prompt(BaseModel):
 
 class LLMConfig(BaseModel):
     llm_name: str = os.getenv("LLM_NAME", "gpt-4-turbo-preview")
-    api_base: str | None = None
+    api_base: str | None = os.getenv("OPENAI_API_BASE")
+    model_family: str = os.getenv("LLM_MODEL_FAMILY", "openai")
 
 
 class IntermediateStep(BaseModel):

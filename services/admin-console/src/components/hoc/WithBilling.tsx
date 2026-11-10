@@ -5,31 +5,32 @@ import { FC, ReactNode } from 'react'
 
 // Make sure to call `loadStripe` outside of a component’s render to avoid
 // recreating the `Stripe` object on every render.
-if (!STRIPE_PUBLIC_KEY) {
-  throw new Error('Missing Stripe public key')
-}
-
-const stripe = loadStripe(STRIPE_PUBLIC_KEY)
+const stripe = STRIPE_PUBLIC_KEY ? loadStripe(STRIPE_PUBLIC_KEY) : null
 
 type WithBillingProps = {
   children: ReactNode
 }
 
-const WithBilling: FC<WithBillingProps> = ({ children }) => (
-  <Elements
-    stripe={stripe}
-    options={{
-      fonts: [
-        {
-          src: 'https://fonts.googleapis.com/css2?family=Lato:wght@100;300;400;700;900&display=swap',
-          family: 'Lato, sans-serif',
-        },
-      ],
-    }}
-  >
-    {children}
-  </Elements>
-)
+const WithBilling: FC<WithBillingProps> = ({ children }) =>
+  stripe ? (
+    <Elements
+      stripe={stripe}
+      options={{
+        fonts: [
+          {
+            src: 'https://fonts.googleapis.com/css2?family=Lato:wght@100;300;400;700;900&display=swap',
+            family: 'Lato, sans-serif',
+          },
+        ],
+      }}
+    >
+      {children}
+    </Elements>
+  ) : (
+    <div className="text-destructive">
+      Stripe is not configured for this deployment.
+    </div>
+  )
 
 export default WithBilling
 

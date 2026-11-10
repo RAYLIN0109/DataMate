@@ -5,8 +5,8 @@ LABEL Author="Juan Sebastian Valacco"
 WORKDIR /app
 
 # Install dependencies based on the preferred package manager
-COPY package.json pnpm-lock.yaml* ./
-RUN corepack enable pnpm && pnpm i
+COPY package.json pnpm-lock.yaml* .npmrc ./
+RUN npm i -g pnpm@8.15.9 --registry=https://registry.npmmirror.com && pnpm i
 
 COPY . .
 

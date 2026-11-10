@@ -1,7 +1,13 @@
 import { getAccessToken, withApiAuthRequired } from '@auth0/nextjs-auth0'
 import { NextApiRequest, NextApiResponse } from 'next'
 
-export default withApiAuthRequired(
+const MOCK_TOKEN = 'admin@datamate.local'
+
+const mockHandler = async (_req: NextApiRequest, res: NextApiResponse) => {
+  res.status(200).json(MOCK_TOKEN)
+}
+
+const handler = withApiAuthRequired(
   async (req: NextApiRequest, res: NextApiResponse) => {
     try {
       const { accessToken } = await getAccessToken(req, res)
@@ -17,3 +23,5 @@ export default withApiAuthRequired(
     }
   },
 )
+
+export default process.env.AUTH_DISABLED === 'true' ? mockHandler : handler

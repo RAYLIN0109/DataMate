@@ -2,6 +2,7 @@ import datetime
 import difflib
 import logging
 import os
+import re
 from functools import wraps
 from queue import Queue
 from threading import Thread
@@ -14,6 +15,9 @@ from google.api_core.exceptions import GoogleAPIError
 from langchain.agents.agent import AgentExecutor
 from langchain.agents.agent_toolkits.base import BaseToolkit
 from langchain.agents.mrkl.base import ZeroShotAgent
+from langchain.agents.mrkl.output_parser import MRKLOutputParser
+from langchain_core.agents import AgentFinish
+from langchain_core.exceptions import OutputParserException
 from langchain.callbacks.base import BaseCallbackManager
 from langchain.callbacks.manager import (
     AsyncCallbackManagerForToolRun,
@@ -23,6 +27,7 @@ from langchain.chains.llm import LLMChain
 from langchain.tools.base import BaseTool
 from langchain_community.callbacks import get_openai_callback
 from langchain_openai import AzureOpenAIEmbeddings, OpenAIEmbeddings
+from dataherald.utils.compat_embeddings import TextOpenAIEmbeddings
 from overrides import override
 from pydantic import BaseModel, Field
 from sql_metadata import Parser
@@ -55,6 +60,23 @@ from dataherald.utils.agent_prompts import (
 from dataherald.utils.timeout_utils import run_with_timeout
 
 logger = logging.getLogger(__name__)
+
+
+class DataheraldOutputParser(MRKLOutputParser):
+    """MRKL parser that accepts a fenced SQL block without a 'Final Answer:' prefix.
+
+    deepseek-flash often answers the prompt's instruction to "return the SQL query
+    between ```sql and ``` tags" literally, omitting the ReAct 'Final Answer:' prefix,
+    which makes the base parser reject the output and loop on parsing errors.
+    """
+
+    def parse(self, text: str):
+        try:
+            return super().parse(text)
+        except OutputParserException as error:
+            if "```" in text:
+                return AgentFinish({"output": text}, text)
+            raise error
 
 
 TOP_K = SQLGenerator.get_upper_bound_limit()
@@ -698,7 +720,12 @@ class DataheraldSQLAgent(SQLGenerator):
             callback_manager=callback_manager,
         )
         tool_names = [tool.name for tool in tools]
-        agent = ZeroShotAgent(llm_chain=llm_chain, allowed_tools=tool_names, **kwargs)
+        agent = ZeroShotAgent(
+            llm_chain=llm_chain,
+            allowed_tools=tool_names,
+            output_parser=DataheraldOutputParser(),
+            **kwargs,
+        )
         return AgentExecutor.from_agent_and_tools(
             agent=agent,
             tools=tools,
@@ -730,6 +757,7 @@ class DataheraldSQLAgent(SQLGenerator):
             temperature=0,
             model_name=self.llm_config.llm_name,
             api_base=self.llm_config.api_base,
+            model_family=self.llm_config.model_family,
         )
         repository = TableDescriptionRepository(storage)
         db_scan = repository.get_all_tables_by_db(
@@ -776,8 +804,10 @@ class DataheraldSQLAgent(SQLGenerator):
                 instructions=instructions,
                 is_multiple_schema=True if user_prompt.schemas else False,
                 db_scan=db_scan,
-                embedding=OpenAIEmbeddings(
-                    openai_api_key=database_connection.decrypt_api_key(),
+                embedding=TextOpenAIEmbeddings(
+                    openai_api_key=os.environ.get("EMBEDDING_API_KEY")
+                    or database_connection.decrypt_api_key(),
+                    openai_api_base=os.environ.get("EMBEDDING_API_BASE"),
                     model=EMBEDDING_MODEL,
                 ),
             )
@@ -850,6 +880,7 @@ class DataheraldSQLAgent(SQLGenerator):
             temperature=0,
             model_name=self.llm_config.llm_name,
             api_base=self.llm_config.api_base,
+            model_family=self.llm_config.model_family,
             streaming=True,
         )
         repository = TableDescriptionRepository(storage)
@@ -881,8 +912,10 @@ class DataheraldSQLAgent(SQLGenerator):
                 model=EMBEDDING_MODEL,
             )
         else:
-            embedding = OpenAIEmbeddings(
-                openai_api_key=database_connection.decrypt_api_key(),
+            embedding = TextOpenAIEmbeddings(
+                openai_api_key=os.environ.get("EMBEDDING_API_KEY")
+                or database_connection.decrypt_api_key(),
+                openai_api_base=os.environ.get("EMBEDDING_API_BASE"),
                 model=EMBEDDING_MODEL,
             )
             toolkit = SQLDatabaseToolkit(

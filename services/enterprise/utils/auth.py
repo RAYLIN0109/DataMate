@@ -82,6 +82,8 @@ class Authorize:
     def user(self, payload: dict) -> User:
         sub = payload["sub"]
         user = user_service.get_user_by_sub(sub)
+        if not user and auth_settings.auth_disabled:
+            user = user_service.get_user_by_email(sub)
         if not user:
             raise UnauthorizedUserError(email=sub)
         return user
@@ -134,11 +136,6 @@ def get_api_key(api_key: str = Security(api_key_header)) -> str:
     raise InvalidOrRevokedAPIKeyError(key_id=api_key)
 
 
-def verify_token(token: dict = Security(token_auth_scheme)):
-    VerifyToken(token.credentials).verify()
-    return token
-
-
 def get_auth_scheme():
     if auth_settings.auth_disabled:
         print("Auth is disabled")
@@ -146,9 +143,18 @@ def get_auth_scheme():
     return token_auth_scheme
 
 
+def verify_token(token: dict = Security(get_auth_scheme())):
+    if not auth_settings.auth_disabled:
+        VerifyToken(token.credentials).verify()
+    return token
+
+
 def authenticate_user(token=Security(get_auth_scheme())):
     payload = (
-        {auth_settings.auth0_issuer + "email": token.credentials}
+        {
+            "sub": token.credentials,
+            auth_settings.auth0_issuer + "email": token.credentials,
+        }
         if auth_settings.auth_disabled
         else VerifyToken(token.credentials).verify()
     )
